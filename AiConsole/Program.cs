@@ -51,20 +51,57 @@ internal class Program
                     Console.WriteLine();
                 }*/
 
+        /*
+
+                // This example shows how to process multiple text files in a directory, sending each file's content to the AI model for analysis and summarization.
+                // Ensure the "posts" directory exists and contains sample files
+                string postsDir = "posts";
+                if (!Directory.Exists(postsDir))
+                {
+                    Directory.CreateDirectory(postsDir);
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        string filePath = Path.Combine(postsDir, $"post{i}.txt");
+                        File.WriteAllText(filePath, $"This is the content of post number {i}.");
+                    }
+                }
+
+                var builder = Host.CreateApplicationBuilder();
+
+                builder.Services.AddChatClient(new OllamaChatClient(new Uri("http://localhost:11434"), "llama3.1:latest"));
+
+                var app = builder.Build();
+
+                var chatClient = app.Services.GetRequiredService<IChatClient>();
+
+                var posts = Directory.GetFiles("posts").Take(5).ToArray();
+                foreach (var post in posts)
+                {
+                    string prompt = $$"""
+                 You will receive an input text and the desired output format.
+                 You need to analyze the text and produce the desired output format.
+                 You not allow to change code, text, or other references.
+
+                 # Desired response
+
+                 Only provide a RFC8259 compliant JSON response following this format without deviation.
+
+                 {
+                    "title": "Title pulled from the front matter section",
+                    "summary": "Summarize the article in no more than 100 words"
+                 }
+
+                 # Article content:
+
+                 {{File.ReadAllText(post)}}
+                 """;
+
+                    var response = await chatClient.GetResponseAsync(prompt);
+                    Console.WriteLine(response.Text);
+                    Console.WriteLine(Environment.NewLine);
+                }*/
 
 
-
-        // Ensure the "posts" directory exists and contains sample files
-        string postsDir = "posts";
-        if (!Directory.Exists(postsDir))
-        {
-            Directory.CreateDirectory(postsDir);
-            for (int i = 1; i <= 5; i++)
-            {
-                string filePath = Path.Combine(postsDir, $"post{i}.txt");
-                File.WriteAllText(filePath, $"This is the content of post number {i}.");
-            }
-        }
 
         var builder = Host.CreateApplicationBuilder();
 
@@ -78,27 +115,33 @@ internal class Program
         foreach (var post in posts)
         {
             string prompt = $$"""
-         You will receive an input text and the desired output format.
-         You need to analyze the text and produce the desired output format.
-         You not allow to change code, text, or other references.
+                  You will receive an input text and the desired output format.
+                  You need to analyze the text and produce the desired output format.
+                  You not allow to change code, text, or other references.
 
-         # Desired response
+                  # Desired response
 
-         Only provide a RFC8259 compliant JSON response following this format without deviation.
+                  Only provide a RFC8259 compliant JSON response following this format without deviation.
 
-         {
-            "title": "Title pulled from the front matter section",
-            "summary": "Summarize the article in no more than 100 words"
-         }
+                  {
+                     "title": "Title pulled from the front matter section",
+                     "tags": "Array of tags based on analyzing the article content. Tags should be lowercase."
+                  }
 
-         # Article content:
+                  # Article content:
 
-         {{File.ReadAllText(post)}}
-         """;
+                  {{File.ReadAllText(post)}}
+                  """;
 
-            var response = await chatClient.GetResponseAsync(prompt);
-            Console.WriteLine(response.Text);
-            Console.WriteLine(Environment.NewLine);
+            var response = await chatClient.GetResponseAsync<PostCategory>(prompt);
+
+            Console.WriteLine(
+              $"{response.Result.Title}. Tags: {string.Join(",", response.Result.Tags)}");
         }
+    }
+    public class PostCategory
+    {
+        public string Title { get; set; } = string.Empty;
+        public string[] Tags { get; set; } = [];
     }
 }
